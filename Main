@@ -1,0 +1,11 @@
+package ultrapvp.ssm;
+
+public class Main extends JavaPlugin implements Listener {
+
+/*
+ SirJackLaserGuns you can edit anything that you want to start this
+ project off.  Email it to me with the email I gave you, when you 
+ have updated it.
+*/
+
+}

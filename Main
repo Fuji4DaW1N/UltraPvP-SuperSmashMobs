@@ -1,11 +1,265 @@
 package ultrapvp.ssm;
 
+import org.bukkit.Bukkit;
+import org.bukkit.Color;
+import org.bukkit.Effect;
+import org.bukkit.EntityEffect;
+import org.bukkit.FireworkEffect;
+import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.Sound;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandSender;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.enchantments.EnchantmentWrapper;
+import org.bukkit.entity.Firework;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
+import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerToggleFlightEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.FireworkMeta;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.util.Vector;
+
 public class Main extends JavaPlugin implements Listener {
+	
+	
+	
+	@Override
+	public void onEnable() {
+		getServer().getPluginManager().registerEvents(this, this);
+		getLogger().info("SuperSmashMobs has been enabled.  Depends on DisguiseCraft");
+		
+	}
+	
+	@Override
+	public void onDisable() {
+		getLogger().info("SuperSmashMobs has been disabled.");
+	}
 
-/*
- SirJackLaserGuns you can edit anything that you want to start this
- project off.  Email it to me with the email I gave you, when you 
- have updated it.
-*/
+	@SuppressWarnings("deprecation")
+	@EventHandler 
+	public void onDeath(PlayerDeathEvent e) {
+		final Player p = e.getEntity();
+		if (e.getEntity() instanceof Player) {
+			p.setHealth(20);
+			p.setFoodLevel(20);
+			p.setGameMode(GameMode.SPECTATOR);
+			p.sendMessage("§cSSM> You have died.  You will respawn in 5 seconds...");
+			p.playEffect(p.getLocation(), Effect.PORTAL,500);
+			p.getWorld().strikeLightningEffect(p.getLocation());
+			
+			Bukkit.getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
 
+				@Override
+				public void run() {
+					p.sendMessage("§aSSM> You have respawned.  Go get em! ;)");
+					p.playEffect(p.getLocation(), Effect.HEART, 500);
+					p.playSound(p.getLocation(), Sound.IRONGOLEM_HIT, 10, 2);
+					p.setGameMode(GameMode.ADVENTURE);
+					
+
+							try {
+									final Location loc = p.getLocation();
+									final Firework f = p.getLocation().getWorld()
+											.spawn(loc, Firework.class);
+
+									// f.getLocation().setX(p.getLocation().getX() +
+									// (a*1000));
+									FireworkMeta fm = f.getFireworkMeta();
+
+									fm.addEffect(FireworkEffect.builder()
+
+									.trail(true).with(FireworkEffect.Type.BURST)
+											.with(FireworkEffect.Type.BALL)
+											.with(FireworkEffect.Type.BALL_LARGE)
+											.withColor(Color.GREEN).withColor(Color.YELLOW)
+											.build());
+
+									fm.setPower(0);
+									f.setFireworkMeta(fm);
+							} catch (Exception e) {
+								Bukkit.getServer().broadcastMessage(e.toString());
+							}
+				
+				}
+			}, 100L);
+		
+		}
+			
+	}
+	
+	@EventHandler
+	public void onPlayerDamage(EntityDamageEvent e){
+	final Player p = (Player) e.getEntity();
+	if(e.getEntity() instanceof Player){
+			if(e.getCause() == DamageCause.FALL){
+					Location l = e.getEntity().getLocation().add(0, -1, 0);
+						e.setCancelled(true);
+					}
+			}
+	
+	}
+	
+	
+	
+	
+	@SuppressWarnings("deprecation")
+	@EventHandler
+	public void onPlayerMove(PlayerMoveEvent event){
+	Player p = event.getPlayer();
+	if (p.getGameMode() != GameMode.SPECTATOR) {	
+		
+	
+		if (p.isOnGround()) {
+			p.playEffect(p.getLocation(), Effect.HAPPY_VILLAGER, 500);
+			p.setAllowFlight(true);
+		} else {
+			if (!p.isOnGround()) {
+				p.playEffect(p.getLocation(), Effect.VILLAGER_THUNDERCLOUD, 500);
+			}
+		}
+	} else {
+		
+	}
+	
+	if (!p.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
+		p.playEffect(p.getLocation(), Effect.COLOURED_DUST, 500);
+	} else {
+		
+	}
+	
+
+	}
+	
+	@SuppressWarnings("deprecation")
+	@EventHandler
+	public void interact(PlayerInteractEvent e) {
+		final Player p = e.getPlayer();
+		if ((e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) && 
+				p.getItemInHand().getType() == Material.IRON_AXE) {
+			
+			if (p.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
+				p.sendMessage("§cSSM> You cannot use this for 5 seconds.");
+			} else {
+				
+			}
+		}
+				p.setVelocity(new Vector(0,2,0));
+				p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 100, 1));
+				p.playEffect(p.getLocation(), Effect.EXPLOSION_HUGE, 500);
+				p.playSound(p.getLocation(), Sound.EXPLODE, 100, 1);
+				p.sendMessage("§aSSM> You used Hidden Leap.");
+						
+			
+	if ((e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) && p.getItemInHand().getType() == Material.IRON_SWORD) {
+		
+		
+		if (p.hasPotionEffect(PotionEffectType.SPEED)) {
+			p.sendMessage("§cSSM> You cannot use this for 5 seconds...");
+		} else {
+			if (!p.hasPotionEffect(PotionEffectType.SPEED)) {
+				p.sendMessage("§aSSM> You used Arrow Attack.");
+				
+				p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 100, 1));
+				p.shootArrow();
+				p.shootArrow();
+				p.shootArrow();
+				p.shootArrow();
+				p.shootArrow();
+				p.shootArrow();
+				p.shootArrow();
+				p.shootArrow();
+				p.shootArrow();
+			}
+		}
+	}
+	}
+	
+	@EventHandler
+	public void join(PlayerJoinEvent e) {
+		final Player p = e.getPlayer();
+		p.sendMessage("§aSSM> Welcome back.  Don't forget to choose a class by typing /classes.");
+		p.setAllowFlight(true);
+		p.playEffect(EntityEffect.WOLF_HEARTS);
+		p.playSound(p.getLocation(), Sound.CHEST_OPEN, 10, 2);
+	}
+	
+	@EventHandler
+    public void onFlightAttempt(PlayerToggleFlightEvent event) {
+		
+	    final Player p = event.getPlayer();    
+	       if (p.getGameMode() != GameMode.CREATIVE) {
+	    	   p.playSound(p.getLocation(), Sound.IRONGOLEM_DEATH, 10, -10);
+	    	   event.setCancelled(true);
+	    	   p.setAllowFlight(false);
+	    	   Vector v = p.getLocation().getDirection().multiply(1).setY(1);
+	    	   p.setVelocity(v);
+	       } else {
+	    	   
+	       }
+	    	
+   
+    }
+	
+	
+	public boolean onCommand(CommandSender s, Command cmd, String label, String[] args) {
+		Player p = (Player) s;
+		if (cmd.getName().equalsIgnoreCase("classes")) {
+			p.sendMessage("§a--- §e[Classes] §a---");
+			p.sendMessage("§a/Zombie");
+			p.sendMessage("§a/Skeleton");
+			p.sendMessage("§a/Spider");
+			return true;
+		}
+		if (cmd.getName().equalsIgnoreCase("class")) {
+			if (args.length == 0) {
+				p.sendMessage("§cSSM> Please type a kit!");
+				return true;
+			} else {
+				if (args[0].equalsIgnoreCase("spider")) {
+					p.getInventory().clear();
+					
+					
+					ItemStack Sword = new ItemStack(Material.IRON_SWORD);
+					ItemMeta im = Sword.getItemMeta();
+					
+					Enchantment unbreakingEnch = new EnchantmentWrapper(34);
+					
+					im.setDisplayName("§a§lSpider §e- §a§lRight-Click Hold");
+					Sword.setItemMeta(im);
+					Sword.addEnchantment(unbreakingEnch, 1);
+					p.getInventory().addItem(Sword);
+					
+					
+					
+					ItemStack Axe = new ItemStack(Material.IRON_AXE);
+					ItemMeta im1 = Axe.getItemMeta();
+										
+					im1.setDisplayName("§a§lSpider §e- §a§lRight Click");
+					Axe.setItemMeta(im1);
+					Axe.addEnchantment(unbreakingEnch, 2);
+					p.getInventory().addItem(Axe);
+					
+					
+					return true;
+				}
+			}
+			
+		} 
+		return false;
+	}
+	
 }

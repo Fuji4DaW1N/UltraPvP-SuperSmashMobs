@@ -1,5 +1,6 @@
 package ultrapvp.ssm;
 
+import java.io.File;
 import java.util.List;
 
 import org.bukkit.Bukkit;
@@ -13,22 +14,23 @@ import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.enchantments.Enchantment;
-import org.bukkit.enchantments.EnchantmentWrapper;
+import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Firework;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.entity.Zombie;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
+import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.event.player.PlayerToggleFlightEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.FireworkMeta;
@@ -42,20 +44,34 @@ import org.bukkit.scoreboard.Team;
 import org.bukkit.util.Vector;
 
 public class Main extends JavaPlugin implements Listener {
-	
+
 	static ScoreboardManager scorem = Bukkit.getScoreboardManager();
-	
+
 	static Scoreboard board = scorem.getNewScoreboard();
-	
+
 	static Team spider = board.registerNewTeam("spider");
-	
+
+	static Team skeleton = board.registerNewTeam("skeleton");
+
 	@Override
 	public void onEnable() {
 		getServer().getPluginManager().registerEvents(this, this);
-		getLogger().info("SuperSmashMobs has been enabled.  Depends on DisguiseCraft");
-		
+		if (new File(getDataFolder().toString()).exists() == false) {
+			this.getConfig().set("TestMap", null);
+			this.getConfig().set("TestMap.x", 0);
+			this.getConfig().set("TestMap.y", 0);
+			this.getConfig().set("TestMap.z", 0);
+			saveConfig();
+
+		} else {
+			reloadConfig();
+		}
+
+		getLogger().info(
+				"SuperSmashMobs has been enabled.  Depends on DisguiseCraft");
+
 	}
-	
+
 	@Override
 	public void onDisable() {
 		getLogger().info("SuperSmashMobs has been disabled.");
@@ -67,162 +83,235 @@ public class Main extends JavaPlugin implements Listener {
 		e.setCancelled(true);
 		p.sendMessage("§cSSM> You cannot drop items here.");
 	}
-	
-	
-	@SuppressWarnings("deprecation")
-	@EventHandler 
+
+	@EventHandler
+	public void pickup(PlayerPickupItemEvent e) {
+		e.setCancelled(true);
+	}
+
+	@EventHandler
 	public void onDeath(PlayerDeathEvent e) {
 		final Player p = e.getEntity();
-		if (e.getEntity() instanceof Player) {
+		Location respawn = new Location(p.getWorld(), p.getLocation()
+				.getBlockX(), 100, p.getLocation().getBlockZ());
+			p.getWorld().strikeLightningEffect(p.getLocation());
+			p.teleport(respawn);
+		
 			e.getDrops().clear();
 			p.setHealth(20);
 			p.setFoodLevel(20);
 			p.setGameMode(GameMode.SPECTATOR);
-			p.sendMessage("§cSSM> You have died.  You will respawn in 5 seconds...");
-			p.playEffect(p.getLocation(), Effect.PORTAL,500);
-			p.getWorld().strikeLightningEffect(p.getLocation());
+			p.sendMessage("§cSSM> You have died.  You will respawn in 10 seconds...");
+
 			
+
 			Bukkit.getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
 
+				@SuppressWarnings("deprecation")
 				@Override
 				public void run() {
-					
-					
-					
+
 					p.sendMessage("§aSSM> You have respawned.  Go get em! ;)");
 					p.playEffect(p.getLocation(), Effect.HEART, 500);
 					p.playSound(p.getLocation(), Sound.IRONGOLEM_HIT, 10, 2);
 					p.setGameMode(GameMode.ADVENTURE);
-						if (spider.hasPlayer(p)) {
-							spiderClass(p);
-						}
-
-							try {
-									final Location loc = p.getLocation();
-									final Firework f = p.getLocation().getWorld()
-											.spawn(loc, Firework.class);
-
-									// f.getLocation().setX(p.getLocation().getX() +
-									// (a*1000));
-									FireworkMeta fm = f.getFireworkMeta();
-
-									fm.addEffect(FireworkEffect.builder()
-
-									.trail(true).with(FireworkEffect.Type.BURST)
-											.with(FireworkEffect.Type.BALL)
-											.with(FireworkEffect.Type.BALL_LARGE)
-											.withColor(Color.GREEN).withColor(Color.YELLOW)
-											.build());
-
-									fm.setPower(0);
-									f.setFireworkMeta(fm);
-							} catch (Exception e) {
-								Bukkit.getServer().broadcastMessage(e.toString());
-							}
-				
-				}
-			}, 100L);
-		
-		}
-			
-	}
-	
-	@EventHandler
-	public void onPlayerDamage(EntityDamageEvent e){
-	if(e.getEntity() instanceof Player){
-			if(e.getCause() == DamageCause.FALL){
-						e.setCancelled(true);
+					if (spider.hasPlayer(p)) {
+						spiderClass(p);
 					}
-			}
-	
+					if (skeleton.hasPlayer(p)) {
+						skeletonClass(p);
+					}
+
+					try {
+						final Location loc = p.getLocation();
+						final Firework f = p.getLocation().getWorld()
+								.spawn(loc, Firework.class);
+
+						// f.getLocation().setX(p.getLocation().getX() +
+						// (a*1000));
+						FireworkMeta fm = f.getFireworkMeta();
+
+						fm.addEffect(FireworkEffect.builder()
+
+						.trail(true).with(FireworkEffect.Type.BURST)
+								.with(FireworkEffect.Type.BALL)
+								.with(FireworkEffect.Type.BALL_LARGE)
+								.withColor(Color.GREEN).withColor(Color.YELLOW)
+								.build());
+
+						fm.setPower(0);
+						f.setFireworkMeta(fm);
+					} catch (Exception e) {
+						Bukkit.getServer().broadcastMessage(e.toString());
+					}
+
+				}
+			}, 200L);
+
 	}
-	
-	
-	
-	
+
+	@EventHandler
+	public void onFoodLevelChange(FoodLevelChangeEvent e) {
+		final Player p = (Player) e.getEntity();
+		if (e.getEntity() instanceof Player) {
+			e.setCancelled(true);
+			p.setFoodLevel(20);
+		}
+
+	}
+
+	@EventHandler
+	public void onPlayerDamage(EntityDamageEvent e) {
+		if (e.getEntity() instanceof Player) {
+			if (e.getCause() == DamageCause.FALL) {
+				e.setCancelled(true);
+			}
+		}
+
+	}
+
 	@SuppressWarnings("deprecation")
 	@EventHandler
-	public void onPlayerMove(PlayerMoveEvent event){
-	Player p = event.getPlayer();
-	if (p.getGameMode() != GameMode.SPECTATOR) {	
+	public void onPlayerMove(PlayerMoveEvent event) {
+
+		Player p = event.getPlayer();
+		p.setAllowFlight(true);
 		
-	
-		if (p.isOnGround()) {
-			p.playEffect(p.getLocation(), Effect.HAPPY_VILLAGER, 500);
-			p.setAllowFlight(true);
-		} else {
-			if (!p.isOnGround()) {
-				p.playEffect(p.getLocation(), Effect.VILLAGER_THUNDERCLOUD, 500);
+		Location respawn = new Location(p.getWorld(), p.getLocation()
+				.getBlockX(), 100, p.getLocation().getBlockZ());
+
+		if (p.getLocation().getY() < 1) {
+
+			if (p.isOp()) {
+				p.teleport(respawn);
+			} else {
+				if (p.isOp() == false) {
+					p.teleport(respawn);
+				}
 			}
+			reset(p);
+			p.setHealth(20);
+			p.setFoodLevel(20);
+			p.setGameMode(GameMode.SPECTATOR);
+			p.sendMessage("§cSSM> You have died.  You will respawn in 10 seconds...");
+			p.getWorld().strikeLightningEffect(p.getLocation());
+			Bukkit.getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+
+				@Override
+				public void run() {
+
+					p.sendMessage("§aSSM> You have respawned.  Go get em! ;)");
+					p.playEffect(p.getLocation(), Effect.HEART, 500);
+					p.playSound(p.getLocation(), Sound.IRONGOLEM_HIT, 10, 2);
+					p.setGameMode(GameMode.ADVENTURE);
+					if (spider.hasPlayer(p)) {
+						spiderClass(p);
+					}
+					if (skeleton.hasPlayer(p)) {
+						skeletonClass(p);
+					}
+
+					try {
+						final Location loc = p.getLocation();
+						final Firework f = p.getLocation().getWorld()
+								.spawn(loc, Firework.class);
+
+						// f.getLocation().setX(p.getLocation().getX() +
+						// (a*1000));
+						FireworkMeta fm = f.getFireworkMeta();
+
+						fm.addEffect(FireworkEffect.builder()
+
+						.trail(true).with(FireworkEffect.Type.BURST)
+								.with(FireworkEffect.Type.BALL)
+								.with(FireworkEffect.Type.BALL_LARGE)
+								.withColor(Color.GREEN).withColor(Color.YELLOW)
+								.build());
+
+						fm.setPower(0);
+						f.setFireworkMeta(fm);
+					} catch (Exception e) {
+						Bukkit.getServer().broadcastMessage(e.toString());
+					}
+
+				}
+			}, 200L);
 		}
-	} else {
-		
 	}
-	}
-	
+
 	@SuppressWarnings("deprecation")
 	@EventHandler
 	public void interact(PlayerInteractEvent e) {
 		final Player p = e.getPlayer();
-		if ((e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) && 
-				p.getItemInHand().getType() == Material.IRON_AXE) {
-			
+		if ((e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK)
+				&& p.getItemInHand().getType() == Material.IRON_AXE) {
+
 			if (p.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
-				p.sendMessage("§cSSM> You cannot use this for 5 seconds.");
+				p.sendMessage("§cSSM> You cannot use this for 5 seconds...");
 			} else {
 				if (!p.hasPotionEffect(PotionEffectType.INVISIBILITY)) {
-					
-					double radius = 3D;
-					List<Entity> near = p.getLocation().getWorld().getEntities();
-						for(Entity e1 : near) {
-						    if(e1.getLocation().distance(p.getLocation()) <= radius) {
-						        if (e1 instanceof Player) {
-						        	((Player) e1).getPlayer().damage(3);
-						        	p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, 100, 10));
+					p.setHealth(20);
+					double radius = 5D;
+					List<Entity> near = p.getLocation().getWorld()
+							.getEntities();
+					for (Entity e1 : near) {
+						if (e1.getLocation().distance(p.getLocation()) <= radius) {
+							if (e1 instanceof Player) {
+								((Player) e1).damage(15);
+								p.addPotionEffect(new PotionEffect(
+										PotionEffectType.REGENERATION, 100, 10));
+							} else {
+								if (e1 instanceof Arrow) {
+
+								} else {
+									p.sendMessage("§cSSM> That is Entity: "
+											+ e1.getEntityId()
+											+ ". You cannot attack that type of Entity.");
+								}
+
+							}
+
+						}
 					}
-						
-					}
-					}
-					
-					
-					p.setVelocity(new Vector(0,2,0));
-					p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 100, 1));
+
+					p.setVelocity(new Vector(0, 2, 0));
+					p.addPotionEffect(new PotionEffect(
+							PotionEffectType.INVISIBILITY, 100, 1));
 					p.playEffect(p.getLocation(), Effect.EXPLOSION_HUGE, 500);
 					p.playSound(p.getLocation(), Sound.EXPLODE, 100, 1);
 					p.sendMessage("§aSSM> You used Hidden Leap.");
-				
+
 				}
-				
+
 			}
-		
+
 		}
-				
-			
-	if ((e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK) && p.getItemInHand().getType() == Material.IRON_SWORD) {
-		
-		
-		if (p.hasPotionEffect(PotionEffectType.SPEED)) {
-			p.sendMessage("§cSSM> You cannot use this for 5 seconds...");
-		} else {
-			if (!p.hasPotionEffect(PotionEffectType.SPEED)) {
-				p.sendMessage("§aSSM> You used Arrow Attack.");
-				
-				
-				p.shootArrow().setBounce(false);
-				p.shootArrow().setBounce(false);
-				p.shootArrow().setBounce(false);
-				p.shootArrow().setBounce(false);
-				p.shootArrow().setBounce(false);
-				p.shootArrow().setBounce(false);
-				p.shootArrow().setBounce(false);
-				p.shootArrow().setBounce(false);
-				p.shootArrow().setBounce(false);
-				p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 100, 1));
+
+		if ((e.getAction() == Action.RIGHT_CLICK_AIR || e.getAction() == Action.RIGHT_CLICK_BLOCK)
+				&& p.getItemInHand().getType() == Material.IRON_SWORD) {
+
+			if (p.hasPotionEffect(PotionEffectType.SPEED)) {
+				p.sendMessage("§cSSM> You cannot use this for 5 seconds...");
+			} else {
+				if (!p.hasPotionEffect(PotionEffectType.SPEED)) {
+					p.sendMessage("§aSSM> You used Arrow Attack.");
+
+					p.shootArrow().setBounce(false);
+					p.shootArrow().setBounce(false);
+					p.shootArrow().setBounce(false);
+					p.shootArrow().setBounce(false);
+					p.shootArrow().setBounce(false);
+					p.shootArrow().setBounce(false);
+					p.shootArrow().setBounce(false);
+					p.shootArrow().setBounce(false);
+					p.shootArrow().setBounce(false);
+					p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,
+							100, 1));
+				}
 			}
 		}
 	}
-	}
-	
+
 	@EventHandler
 	public void join(PlayerJoinEvent e) {
 		final Player p = e.getPlayer();
@@ -231,25 +320,26 @@ public class Main extends JavaPlugin implements Listener {
 		p.playEffect(EntityEffect.WOLF_HEARTS);
 		p.playSound(p.getLocation(), Sound.CHEST_OPEN, 10, 2);
 	}
-	
+
 	@EventHandler
-    public void onFlightAttempt(PlayerToggleFlightEvent event) {
-		
-	    final Player p = event.getPlayer();    
-	       if (p.getGameMode() != GameMode.CREATIVE) {
-	    	   p.playSound(p.getLocation(), Sound.IRONGOLEM_DEATH, 10, -10);
-	    	   event.setCancelled(true);
-	    	   p.setAllowFlight(false);
-	    	   Vector v = p.getLocation().getDirection().multiply(1).setY(1);
-	    	   p.setVelocity(v);
-	       } else {
-	    	   
-	       }
-	    	
-   
-    }
-	
-	public boolean onCommand(CommandSender s, Command cmd, String label, String[] args) {
+	public void onFlightAttempt(PlayerToggleFlightEvent event) {
+
+		final Player p = event.getPlayer();
+		if (p.getGameMode() != GameMode.CREATIVE) {
+			p.playSound(p.getLocation(), Sound.IRONGOLEM_DEATH, 10, -10);
+			event.setCancelled(true);
+			p.setAllowFlight(false);
+			Vector v = p.getLocation().getDirection().multiply(1).setY(0.);
+			p.setVelocity(v);
+		} else {
+
+		}
+
+	}
+
+	@SuppressWarnings("deprecation")
+	public boolean onCommand(CommandSender s, Command cmd, String label,
+			String[] args) {
 		Player p = (Player) s;
 		if (cmd.getName().equalsIgnoreCase("classes")) {
 			p.sendMessage("§a--- §e[Classes] §a---");
@@ -262,53 +352,151 @@ public class Main extends JavaPlugin implements Listener {
 				return true;
 			} else {
 				if (args[0].equalsIgnoreCase("spider")) {
-					spider.addPlayer(p);
 					spiderClass(p);
-					spider.setPrefix("§e[Spider] ");
-					
-					
+					p.sendMessage("§aSSM> You have chosen the §e§lSPIDER§a.");
+					p.playSound(p.getLocation(), Sound.NOTE_PLING, 10, 2);
+					p.playEffect(p.getLocation(), Effect.CLOUD, 500);
+
 					return true;
+				} else if (args[0].equalsIgnoreCase("skeleton")) {
+					skeletonClass(p);
+					p.sendMessage("§aSSM> You have chosen the §e§lSKELETON§a.");
+
+					p.playSound(p.getLocation(), Sound.NOTE_PLING, 10, 2);
+					p.playEffect(p.getLocation(), Effect.CLOUD, 500);
+
 				}
+				return true;
 			}
-			
-		} 
+
+		}
+
+		if (cmd.getName().equalsIgnoreCase("ssm")) {
+			p.sendMessage("§aSuperSmashMobs: §eCoded by: Fuji4DaW1N_, SirJackLaserGuns, and Temena");
+			return true;
+		}
+
+		if (cmd.getName().equalsIgnoreCase("creater")) {
+			if (args.length == 0) {
+				p.sendMessage("§cSSM> Please supply with a respawn point.");
+			} else {
+
+				this.getConfig().set(args[0], null);
+				this.getConfig().set(args[0] + ".x",
+						p.getLocation().getBlockX());
+				this.getConfig().set(args[0] + ".y",
+						p.getLocation().getBlockY());
+				this.getConfig().set(args[0] + ".z",
+						p.getLocation().getBlockZ());
+				saveConfig();
+				p.sendMessage("§aSSM> You have set a respawn point called: "
+						+ args[0] + ".");
+			}
+		}
+
 		return false;
 	}
 
-	@SuppressWarnings("deprecation")
 	private void spiderClass(Player p) {
 		p.performCommand("d spider");
-		
+
+		spider.addPlayer(p);
+
 		p.getInventory().clear();
-		p.sendMessage("§aSSM> You have chosen the §e§lSPIDER§a.");
+
 		p.setHealth(20);
+
 		p.setFoodLevel(20);
-		p.playSound(p.getLocation(), Sound.NOTE_PLING, 10, 2);
-		p.playEffect(p.getLocation(), Effect.CLOUD, 500);
-		
-		
-		
-		
-		
+
 		ItemStack Sword = new ItemStack(Material.IRON_SWORD);
 		ItemMeta im = Sword.getItemMeta();
-		
-		Enchantment unbreakingEnch = new EnchantmentWrapper(34);
-		
+
 		im.setDisplayName("§a§lSpider §e- §a§lRight-Click Hold");
 		Sword.setItemMeta(im);
 
 		p.getInventory().addItem(Sword);
-		Sword.setDurability((short) 10);
-		
-		
+
 		ItemStack Axe = new ItemStack(Material.IRON_AXE);
 		ItemMeta im1 = Axe.getItemMeta();
-							
+
 		im1.setDisplayName("§a§lSpider §e- §a§lRight Click");
 		Axe.setItemMeta(im1);
-		Axe.addEnchantment(unbreakingEnch, 2);
 		p.getInventory().addItem(Axe);
+
+		p.getInventory().setChestplate(
+				new ItemStack(Material.LEATHER_CHESTPLATE));
+		p.getInventory().setLeggings(new ItemStack(Material.LEATHER_LEGGINGS));
+		p.getInventory().setBoots(new ItemStack(Material.CHAINMAIL_BOOTS));
 	}
-	
+
+	private void skeletonClass(Player p) {
+		p.performCommand("d skeleton");
+
+		skeleton.addPlayer(p);
+
+		p.getInventory().clear();
+
+		p.setHealth(20);
+
+		p.setFoodLevel(20);
+
+		ItemStack Sword = new ItemStack(Material.IRON_SWORD);
+		ItemMeta im = Sword.getItemMeta();
+
+		im.setDisplayName("§a§lSkeleton §e- §a§lRight-Click Hold");
+		Sword.setItemMeta(im);
+
+		p.getInventory().addItem(Sword);
+
+		ItemStack Axe = new ItemStack(Material.IRON_AXE);
+		ItemMeta im1 = Axe.getItemMeta();
+
+		im1.setDisplayName("§a§lSkeleton §e- §a§lRight Click");
+		Axe.setItemMeta(im1);
+		p.getInventory().addItem(Axe);
+
+		ItemStack Bow = new ItemStack(Material.BOW);
+		ItemMeta im2 = Bow.getItemMeta();
+
+		im2.setDisplayName("§a§lSkeleton §e- §a§lRight Click");
+		Bow.setItemMeta(im2);
+		p.getInventory().addItem(Bow);
+
+		p.getInventory().setChestplate(
+				new ItemStack(Material.CHAINMAIL_CHESTPLATE));
+		p.getInventory()
+				.setLeggings(new ItemStack(Material.CHAINMAIL_LEGGINGS));
+		p.getInventory().setBoots(new ItemStack(Material.CHAINMAIL_BOOTS));
+	}
+
+	private void reset(Player p) {
+		p.getInventory().clear();
+		p.getInventory().setHelmet(null);
+		p.getInventory().setBoots(null);
+		p.getInventory().setChestplate(null);
+		p.getInventory().setLeggings(null);
+		p.removePotionEffect(PotionEffectType.SPEED);
+		p.removePotionEffect(PotionEffectType.SLOW);
+		p.removePotionEffect(PotionEffectType.FAST_DIGGING);
+		p.removePotionEffect(PotionEffectType.SLOW_DIGGING);
+		p.removePotionEffect(PotionEffectType.INCREASE_DAMAGE);
+		p.removePotionEffect(PotionEffectType.HEAL);
+		p.removePotionEffect(PotionEffectType.HARM);
+		p.removePotionEffect(PotionEffectType.JUMP);
+		p.removePotionEffect(PotionEffectType.CONFUSION);
+		p.removePotionEffect(PotionEffectType.REGENERATION);
+		p.removePotionEffect(PotionEffectType.DAMAGE_RESISTANCE);
+		p.removePotionEffect(PotionEffectType.FIRE_RESISTANCE);
+		p.removePotionEffect(PotionEffectType.WATER_BREATHING);
+		p.removePotionEffect(PotionEffectType.INVISIBILITY);
+		p.removePotionEffect(PotionEffectType.BLINDNESS);
+		p.removePotionEffect(PotionEffectType.NIGHT_VISION);
+		p.removePotionEffect(PotionEffectType.HUNGER);
+		p.removePotionEffect(PotionEffectType.WEAKNESS);
+		p.removePotionEffect(PotionEffectType.POISON);
+		p.removePotionEffect(PotionEffectType.WITHER);
+		p.removePotionEffect(PotionEffectType.SATURATION);
+		p.removePotionEffect(PotionEffectType.HEALTH_BOOST);
+	}
+
 }
